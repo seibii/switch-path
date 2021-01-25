@@ -1,5 +1,6 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var util_1 = require("./util");
 function switchPathInputGuard(path, routes) {
     if (!util_1.isPattern(path)) {
@@ -51,8 +52,14 @@ function validate(_a) {
     var path = matchedPath ? validatePath(sourcePath, matchedPath) : null;
     var value = matchedValue;
     if (!path) {
-        path = routes["*"] ? sourcePath : null;
-        value = path ? routes["*"] : null;
+        if (sourcePath === "/") {
+            path = routes["*"] ? sourcePath : null;
+            value = path ? routes["/$"] : null;
+        }
+        else {
+            path = routes["*"] ? sourcePath : null;
+            value = path ? routes["*"] : null;
+        }
     }
     return { path: path, value: value };
 }
@@ -61,6 +68,17 @@ function switchPath(sourcePath, routes) {
     var matchedPath = null;
     var matchedValue = null;
     util_1.traverseRoutes(routes, function matchPattern(pattern) {
+        if (pattern[pattern.length - 1] === "$") {
+            var realPattern = pattern.split("/$").join("");
+            if (sourcePath.search(realPattern) === 0 &&
+                betterMatch(pattern, matchedPath) ||
+                sourcePath.search(realPattern + "/") &&
+                    betterMatch(pattern, matchedPath)) {
+                matchedPath = realPattern;
+                matchedValue = routes[pattern];
+            }
+            return;
+        }
         if (sourcePath.search(pattern) === 0 && betterMatch(pattern, matchedPath)) {
             matchedPath = pattern;
             matchedValue = routes[pattern];
@@ -84,11 +102,11 @@ function switchPath(sourcePath, routes) {
     });
     return validate({ sourcePath: sourcePath, matchedPath: matchedPath, matchedValue: matchedValue, routes: routes });
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = switchPath;
 
 },{"./util":2}],2:[function(require,module,exports){
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 function isPattern(candidate) {
     return candidate.charAt(0) === "/" || candidate === "*";
 }
